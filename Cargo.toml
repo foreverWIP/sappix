@@ -1,0 +1,14 @@
+[package]
+name = "sappix"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam = "0.30.1"
+num = "0.4.3"
+
+[dev-dependencies]
+image = "0.25.6"
+
+[build-dependencies]
+cc = "1.2.18"

@@ -1,7 +1,6 @@
-use core::ops::BitAnd;
+use core::ops::Mul;
 
-use glam::FloatExt;
-use num::{Float, Num, PrimInt};
+use glam::Vec4;
 
 #[derive(Clone, Copy)]
 pub enum ColorMode<const N: usize> {
@@ -10,122 +9,102 @@ pub enum ColorMode<const N: usize> {
 }
 
 #[derive(Clone, Copy)]
-pub enum FBColor {
-    Rgba8 { r: u8, g: u8, b: u8, a: u8 },
+pub struct FBColor {
+    internal: Vec4,
 }
 impl FBColor {
-    pub const EMPTY_RGBA8: Self = Self::Rgba8 {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 0,
+    pub const BLACK_RGBA8: Self = Self {
+        internal: Vec4::new(0.0, 0.0, 0.0, 1.0),
     };
 
-    pub const GRAY50_RGBA8: Self = Self::Rgba8 {
-        r: 0x7f,
-        g: 0x7f,
-        b: 0x7f,
-        a: 0xff,
+    pub const EMPTY_RGBA8: Self = Self {
+        internal: Vec4::ZERO,
     };
 
-    pub const WHITE_RGBA8: Self = Self::Rgba8 {
-        r: 0xff,
-        g: 0xff,
-        b: 0xff,
-        a: 0xff,
+    pub const GRAY50_RGBA8: Self = Self {
+        internal: Vec4::new(0.5, 0.5, 0.5, 1.0),
     };
 
-    pub fn r(&self) -> u8 {
-        match self {
-            FBColor::Rgba8 { r, .. } => *r,
+    pub const MAGENTA_RGBA8: Self = Self {
+        internal: Vec4::new(1.0, 0.0, 1.0, 1.0),
+    };
+
+    pub const WHITE_RGBA8: Self = Self {
+        internal: Vec4::ONE,
+    };
+
+    pub const YELLOW_RGBA8: Self = Self {
+        internal: Vec4::new(1.0, 1.0, 0.0, 1.0),
+    };
+
+    pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Self {
+            internal: Vec4::new(r, g, b, a),
         }
     }
 
-    pub fn g(&self) -> u8 {
-        match self {
-            FBColor::Rgba8 { g, .. } => *g,
-        }
+    pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self::new(
+            r as f32 / 255.0,
+            g as f32 / 255.0,
+            b as f32 / 255.0,
+            a as f32 / 255.0,
+        )
     }
 
-    pub fn b(&self) -> u8 {
-        match self {
-            FBColor::Rgba8 { b, .. } => *b,
-        }
+    pub fn to_rgba8(&self) -> [u8; 4] {
+        [
+            (self.r() * 255.0) as u8,
+            (self.g() * 255.0) as u8,
+            (self.b() * 255.0) as u8,
+            (self.a() * 255.0) as u8,
+        ]
     }
 
-    pub fn a(&self) -> u8 {
-        match self {
-            FBColor::Rgba8 { a, .. } => *a,
-        }
+    pub fn r(&self) -> f32 {
+        self.internal.x
     }
 
-    pub fn set_r(&mut self, value: u8) {
-        match self {
-            FBColor::Rgba8 { r, .. } => {
-                *r = value;
-            }
-        }
+    pub fn g(&self) -> f32 {
+        self.internal.y
     }
 
-    pub fn set_g(&mut self, value: u8) {
-        match self {
-            FBColor::Rgba8 { g, .. } => {
-                *g = value;
-            }
-        }
+    pub fn b(&self) -> f32 {
+        self.internal.z
     }
 
-    pub fn set_b(&mut self, value: u8) {
-        match self {
-            FBColor::Rgba8 { b, .. } => {
-                *b = value;
-            }
-        }
+    pub fn a(&self) -> f32 {
+        self.internal.w
     }
 
-    pub fn set_a(&mut self, value: u8) {
-        match self {
-            FBColor::Rgba8 { a, .. } => {
-                *a = value;
-            }
-        }
+    pub fn set_r(&mut self, value: f32) {
+        self.internal.x = value;
     }
 
-    pub fn uses_a(&self) -> bool {
-        match self {
-            FBColor::Rgba8 { .. } => true,
-        }
+    pub fn set_g(&mut self, value: f32) {
+        self.internal.y = value;
     }
 
-    pub fn lerp(&self, rhs: Self, by: u8) -> Self {
-        if by == u8::MIN {
-            return *self;
+    pub fn set_b(&mut self, value: f32) {
+        self.internal.z = value;
+    }
+
+    pub fn set_a(&mut self, value: f32) {
+        self.internal.z = value;
+    }
+
+    pub fn lerp(&self, rhs: Self, by: f32) -> Self {
+        Self {
+            internal: self.internal.lerp(rhs.internal, by),
         }
-        if by == u8::MAX {
-            return match self {
-                Self::Rgba8 { .. } => match rhs {
-                    Self::Rgba8 { .. } => rhs,
-                },
-            };
-        }
-        let by = by as u16;
-        let (src_r, src_g, src_b, src_a) = match self {
-            Self::Rgba8 { r, g, b, a } => ((*r as u16), (*g as u16), (*b as u16), (*a as u16)),
-        };
-        let (dst_r, dst_g, dst_b, dst_a) = match self {
-            Self::Rgba8 { r, g, b, a } => ((*r as u16), (*g as u16), (*b as u16), (*a as u16)),
-        };
-        let final_r = (u8::MAX as u16 - by) * src_r + (by * dst_r);
-        let final_g = (u8::MAX as u16 - by) * src_g + (by * dst_g);
-        let final_b = (u8::MAX as u16 - by) * src_b + (by * dst_b);
-        let final_a = (u8::MAX as u16 - by) * src_a + (by * dst_a);
-        match self {
-            Self::Rgba8 { .. } => Self::Rgba8 {
-                r: (final_r >> 8) as u8,
-                g: (final_g >> 8) as u8,
-                b: (final_b >> 8) as u8,
-                a: (final_a >> 8) as u8,
-            },
+    }
+}
+impl Mul for FBColor {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            internal: self.internal * rhs.internal,
         }
     }
 }

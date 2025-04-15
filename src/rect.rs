@@ -22,7 +22,7 @@ impl ColorRect {
     }
 }
 impl Drawable for ColorRect {
-    fn draw(&mut self, renderer: &mut crate::Renderer) {
+    fn draw(&self, renderer: &mut crate::Renderer) {
         if self.rect.size.x <= 0 || self.rect.size.y <= 0 {
             return;
         }
@@ -46,8 +46,8 @@ impl Drawable for ColorRect {
                     if single_color {
                         colors[0]
                     } else {
-                        let x = ((((x as u16) << 8) / ((self.rect.size.x as u16) << 8)) >> 8) as u8;
-                        let y = ((((y as u16) << 8) / ((self.rect.size.y as u16) << 8)) >> 8) as u8;
+                        let x = x as f32 / self.rect.size.x as f32;
+                        let y = y as f32 / self.rect.size.y as f32;
                         bilinear_4_colors(x, y, colors[0], colors[1], colors[2], colors[3])
                     },
                     self.blend_mode,

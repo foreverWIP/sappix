@@ -45,6 +45,10 @@ impl Renderer {
         &self.fb
     }
 
+    pub fn fb_rgba8(&self) -> Vec<u8> {
+        self.fb.iter().flat_map(|fbc| fbc.to_rgba8()).collect()
+    }
+
     pub fn fill(&mut self, color: FBColor, blend_mode: BlendMode) {
         if blend_mode == BlendMode::Opaque {
             self.fb.fill(color);
@@ -57,7 +61,6 @@ impl Renderer {
         }
     }
 
-    #[inline]
     pub fn set(&mut self, x: FBCoord, y: FBCoord, color: FBColor, blend_mode: BlendMode) {
         if x < 0 || x >= self.width as FBCoord || y < 0 || y >= self.height as FBCoord {
             return;
@@ -67,11 +70,17 @@ impl Renderer {
         blend_func(color, &mut self.fb[idx]);
     }
 
-    pub fn draw(&mut self, drawable: &mut dyn Drawable) {
+    pub fn set_unchecked(&mut self, x: FBCoord, y: FBCoord, color: FBColor, blend_mode: BlendMode) {
+        let blend_func = get_blend_func(blend_mode);
+        let idx = fb_idx!(self, x, y);
+        blend_func(color, &mut self.fb[idx]);
+    }
+
+    pub fn draw(&mut self, drawable: &dyn Drawable) {
         drawable.draw(self);
     }
 
-    pub fn draw_multiple(&mut self, drawables: &mut [&mut dyn Drawable]) {
+    pub fn draw_multiple(&mut self, drawables: &[&dyn Drawable]) {
         for drawable in drawables {
             self.draw(*drawable);
         }

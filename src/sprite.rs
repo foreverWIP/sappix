@@ -2,8 +2,8 @@ use alloc::{sync::Arc, vec::Vec};
 use glam::{U16Vec2, Vec2};
 
 use crate::{
-    BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Line, Rect,
-    bilinear_4_colors,
+    BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Renderer, bilinear_4_colors,
+    rect::Rect,
 };
 
 pub struct Sprite {
@@ -29,7 +29,7 @@ impl Sprite {
         modulate: ColorMode<4>,
         clip_rect: Option<Rect>,
     ) -> Self {
-        let mut ret = Self {
+        Self {
             pixels,
             size: U16Vec2::new(width, height),
             position: FBVec2::new(x, y),
@@ -38,144 +38,224 @@ impl Sprite {
             blend_mode,
             modulate,
             clip_rect,
-        };
-        ret
+        }
     }
 
-    fn calc_bounds(position: FBVec2, rotation: f32, size: U16Vec2, scale: f32) -> Rect {
-        let angle = rotation.rem_euclid(360.0);
-        let angle_rads = angle.to_radians();
-
-        let width_2 = (size.x as f32) / 2.0;
-        let height_2 = (size.y as f32) / 2.0;
-
-        let angle_vec = Vec2::from_angle(angle_rads);
-        let p1 = angle_vec.rotate(Vec2::new(-width_2, -height_2));
-        let p2 = angle_vec.rotate(Vec2::new(width_2, -height_2));
-        let p3 = angle_vec.rotate(Vec2::new(width_2, height_2));
-        let p4 = angle_vec.rotate(Vec2::new(-width_2, height_2));
-
-        let min_x = p1.x.min(p2.x).min(p3.x).min(p4.x);
-        let min_y = p1.y.min(p2.y).min(p3.y).min(p4.y);
-        let max_x = p1.x.max(p2.x).max(p3.x).max(p4.x);
-        let max_y = p1.y.max(p2.y).max(p3.y).max(p4.y);
-
-        let result_width = (max_x - min_x).abs().ceil() * scale;
-        let result_height = (max_y - min_y).abs().ceil() * scale;
-
-        let ret = Rect {
-            position: position + FBVec2::new(min_x as FBCoord, min_y as FBCoord),
-            size: FBVec2::new(result_width as FBCoord, result_height as FBCoord),
-        };
-        ret
-    }
-
-    fn draw_rotozoom(
-        &mut self,
-        renderer: &mut Option<&mut crate::Renderer>,
+    fn draw_rotozoom<const NO_ROTO: bool, const NO_ZOOM: bool>(
+        &self,
+        renderer: &mut Renderer,
         modulate_colors: &[FBColor; 4],
         single_color: bool,
     ) {
-        let angle = ((self.rotation as f32) / 255.0) * 360.0;
-        let angle_rads = angle.to_radians();
-
-        let width_float = self.size.x as f32;
-        let height_float = self.size.y as f32;
-
-        let sin = angle_rads.sin();
-        let cos = angle_rads.cos();
-
-        let bounds =
-            Self::calc_bounds(self.position, angle, self.size, (self.scale as f32) / 256.0);
-        let result_width = bounds.size.x;
-        let result_height = bounds.size.y;
-        let width_2 = result_width / 2;
-        let height_2 = result_height / 2;
-
-        let min_x = bounds.position.x;
-        let min_y = bounds.position.y;
-        let max_x = min_x + bounds.size.x;
-        let max_y = min_y + bounds.size.y;
-
-        for y in (min_y as usize)..(max_y as usize) {
-            for x in (min_x as usize)..(max_x as usize) {
-                let x = x as f32/*  - self.position.x*/;
-                let y = y as f32/*  - self.position.y*/;
-                let src_x = x;
-                let src_y = y;
-                if src_x >= 0.0 && src_x < width_float && src_y >= 0.0 && src_y < height_float {
-                    let dst_x = (x as f32 * cos) - (y as f32 * sin);
-                    let dst_y = (x as f32 * sin) + (y as f32 * cos);
-                    match renderer {
-                        Some(renderer) => {
-                            let color =
-                                self.pixels[src_y as usize * self.size.x as usize + src_x as usize];
-                            renderer.set(
-                                dst_x as FBCoord,
-                                dst_y as FBCoord,
-                                color,
-                                self.blend_mode,
-                            );
-                        }
-                        None => {}
-                    }
-                }
-            }
+        if self.scale == 0 {
+            return;
         }
+        let angle = if NO_ROTO {
+            0.0
+        } else {
+            ((self.rotation as f32 / 256.0) * 360.0).to_radians()
+        };
+        let scale = if NO_ZOOM {
+            1.0
+        } else {
+            self.scale as f32 / 256.0
+        };
 
-        if let Some(renderer) = renderer {
-            Line::new(
-                bounds.position.x,
-                bounds.position.y,
-                bounds.position.x + bounds.size.x,
-                bounds.position.y + bounds.size.y,
-                ColorMode::Solid(FBColor::GRAY50_RGBA8),
-                BlendMode::Opaque,
-            )
-            .draw(renderer);
-            Line::new(
-                bounds.position.x + bounds.size.x,
-                bounds.position.y,
-                bounds.position.x,
-                bounds.position.y + bounds.size.y,
-                ColorMode::Solid(FBColor::GRAY50_RGBA8),
-                BlendMode::Opaque,
-            )
-            .draw(renderer);
-            renderer.set(
-                (bounds.position.x + bounds.size.x / 2) as FBCoord,
-                (bounds.position.y + bounds.size.y / 2) as FBCoord,
-                FBColor::WHITE_RGBA8,
-                BlendMode::Opaque,
-            );
+        let center = self.size.as_vec2() / 2.0;
+
+        // crude approximation of drawing bounds
+        // faster than scanning the entire framebuffer at least
+        let diagonal_radius =
+            ((self.size.x as f32).powi(2) + (self.size.y as f32).powi(2)).sqrt() / 2.0;
+
+        let min_x = ((self.position.x as f32 - (diagonal_radius * scale)) as i16).max(0);
+        let max_x =
+            ((self.position.x as f32 + (diagonal_radius * scale)) as i16).min(renderer.width());
+        let min_y = ((self.position.y as f32 - (diagonal_radius * scale)) as i16).max(0);
+        let max_y =
+            ((self.position.y as f32 + (diagonal_radius * scale)) as i16).min(renderer.height());
+
+        let delta_col = Vec2::new(angle.sin(), angle.cos()) / scale;
+        let delta_row = Vec2::new(delta_col.y, -delta_col.x);
+
+        let start = Vec2::new(
+            center.x
+                - (self.position.x as f32 * delta_col.y + self.position.y as f32 * delta_col.x),
+            center.y
+                - (self.position.x as f32 * delta_row.y + self.position.y as f32 * delta_row.x),
+        );
+
+        {
+            let mut row = start + delta_col * min_y as f32 + delta_row * min_x as f32;
+
+            for y in min_y..max_y {
+                let mut uv = row;
+
+                let mut x = min_x;
+                while x < max_x {
+                    if uv.x >= 0.0
+                        && uv.y >= 0.0
+                        && uv.x < self.size.x as f32
+                        && uv.y < self.size.y as f32
+                    {
+                        break;
+                    }
+                    uv += delta_row;
+                    x += 1;
+                }
+                loop {
+                    if x == max_x {
+                        break;
+                    }
+
+                    if uv.x >= 0.0
+                        && uv.y >= 0.0
+                        && uv.x < self.size.x as f32
+                        && uv.y < self.size.y as f32
+                    {
+                        let c = self.pixels[uv.y as usize * self.size.x as usize + uv.x as usize]
+                            * if single_color {
+                                modulate_colors[0]
+                            } else {
+                                let x = uv.x / self.size.x as f32;
+                                let y = uv.y / self.size.y as f32;
+                                bilinear_4_colors(
+                                    x,
+                                    y,
+                                    modulate_colors[0],
+                                    modulate_colors[1],
+                                    modulate_colors[2],
+                                    modulate_colors[3],
+                                )
+                            };
+                        renderer.set_unchecked(x, y, c, self.blend_mode);
+                    } else {
+                        break;
+                        // renderer.set(x, y, FBColor::MAGENTA_RGBA8, BlendMode::Opaque);
+                    }
+
+                    uv += delta_row;
+
+                    x += 1;
+                }
+
+                row += delta_col;
+            }
         }
     }
 }
 impl Drawable for Sprite {
-    fn draw(&mut self, renderer: &mut crate::Renderer) {
+    fn draw(&self, renderer: &mut Renderer) {
         let (modulate_colors, single_color) = match self.modulate {
             ColorMode::Solid(c) => ([c, c, c, c], true),
             ColorMode::PerPoint(cs) => (cs, false),
         };
-        match (self.rotation, self.scale) {
-            (_, ..=0x100) => {
+        match (self.rotation & 0xff, self.scale) {
+            (_, 0) => {
                 return;
             }
-            /*(0.0, 1.0) => {
-                for y in 0..(self.size.y as FBCoordI) {
-                    for x in 0..(self.size.x as FBCoordI) {
-                        renderer.set(
-                            self.position.x as FBCoordI + x,
-                            self.position.y as FBCoordI + y,
-                            self.pixels[(y as u32 * self.size.x as u32 + x as u32) as usize],
-                            self.blend_mode,
-                        );
-                    }
-                }
-            }*/
+            (0, 0x100) => {
+                self.draw_rotozoom::<true, true>(renderer, &modulate_colors, single_color);
+            }
+            (0, _) => {
+                self.draw_rotozoom::<true, false>(renderer, &modulate_colors, single_color);
+            }
+            (_, 0x100) => {
+                self.draw_rotozoom::<false, true>(renderer, &modulate_colors, single_color);
+            }
             (_, _) => {
-                self.draw_rotozoom(&mut Some(renderer), &modulate_colors, single_color);
+                self.draw_rotozoom::<false, false>(renderer, &modulate_colors, single_color);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ColorMode, Drawable, FBColor};
+    extern crate std;
+
+    use ::test::Bencher;
+    use alloc::{sync::Arc, vec::Vec};
+    use core::ffi::*;
+    use std::random::Random;
+
+    use crate::{BlendMode, Renderer, ffi::*};
+
+    use super::Sprite;
+
+    const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/test.gif");
+
+    #[bench]
+    fn bmp_rotozoom(bencher: &mut Bencher) {
+        let src = test::black_box(unsafe {
+            bm_load_mem(TEST_SPRITE_FILE.as_ptr(), TEST_SPRITE_FILE.len() as c_long)
+        });
+        let dst = test::black_box(unsafe { bm_create(128, 128) });
+        let mut rand = std::random::DefaultRandomSource;
+        bencher.iter(|| unsafe {
+            let scale_whole = u8::random(&mut rand) as f64;
+            let scale_frac = (u8::random(&mut rand) as f64 / (256.0 / 8.0)).fract();
+            let mut scale = scale_whole + scale_frac;
+            if scale == 0.0 {
+                scale = 1.0;
+            }
+            bm_rotate_blit(
+                dst,
+                c_short::random(&mut rand) as i32 % 128,
+                c_short::random(&mut rand) as i32 % 128,
+                src,
+                32,
+                32,
+                ((c_int::random(&mut rand) % 360) as f64).to_radians(),
+                scale,
+            )
+        });
+        unsafe {
+            bm_free(src);
+            bm_free(dst);
+        }
+    }
+
+    #[bench]
+    fn our_rotozoom(bencher: &mut Bencher) {
+        let mut test_img = gif::Decoder::new(TEST_SPRITE_FILE).unwrap();
+        let frame = test_img.read_next_frame().unwrap().unwrap().clone();
+        let palette = test_img.palette().unwrap();
+        let sprite_buf: Vec<_> = frame
+            .buffer
+            .iter()
+            .map(|i| {
+                FBColor::from_rgba8(
+                    palette[*i as usize * 3 + 0],
+                    palette[*i as usize * 3 + 1],
+                    palette[*i as usize * 3 + 2],
+                    0xff,
+                )
+            })
+            .collect();
+
+        let mut sprite = Sprite::new(
+            Arc::new(sprite_buf),
+            test_img.width() as u16,
+            test_img.height() as u16,
+            64,
+            64,
+            0,
+            0x100,
+            BlendMode::Opaque,
+            ColorMode::Solid(FBColor::WHITE_RGBA8),
+            None,
+        );
+
+        let mut renderer = Renderer::new(128, 128);
+        let mut rand = std::random::DefaultRandomSource;
+        bencher.iter(|| {
+            sprite.position.x = c_short::random(&mut rand) % renderer.width();
+            sprite.position.y = c_short::random(&mut rand) % renderer.width();
+            sprite.rotation = c_short::random(&mut rand);
+            sprite.scale = c_ushort::random(&mut rand) & 0x7ff;
+            sprite.draw(&mut renderer)
+        })
     }
 }

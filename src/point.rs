@@ -15,7 +15,7 @@ impl ColorVec2 {
     }
 }
 impl Drawable for ColorVec2 {
-    fn draw(&mut self, renderer: &mut crate::Renderer) {
+    fn draw(&self, renderer: &mut crate::Renderer) {
         if self.position.x < 0
             || self.position.y < 0
             || self.position.x >= renderer.width() as FBCoord

@@ -9,7 +9,7 @@ use sappix::FBColor;
 use sappix::Renderer;
 use sappix::Sprite;
 
-const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/test.gif");
+const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/space.gif");
 
 fn main() {
     let mut test_img = gif::Decoder::new(TEST_SPRITE_FILE).unwrap();
@@ -32,8 +32,8 @@ fn main() {
         Arc::new(sprite_buf),
         test_img.width() as u16,
         test_img.height() as u16,
-        64,
-        64,
+        256,
+        256,
         0,
         0x100,
         BlendMode::Opaque,
@@ -47,7 +47,7 @@ fn main() {
         None,
     );
 
-    let mut renderer = Renderer::new(128, 128);
+    let mut renderer = Renderer::new(512, 512);
 
     let image = File::create("test.gif").unwrap();
     let mut encoder = gif::Encoder::new(
@@ -66,11 +66,11 @@ fn main() {
         ))
         .unwrap();
     encoder.set_repeat(gif::Repeat::Infinite).unwrap();
-    const FRAMECOUNT: usize = 256 * 2;
+    const FRAMECOUNT: usize = 60;
     for i in 0..FRAMECOUNT {
         println!("rendering frame {}", i);
         renderer.fill(FBColor::GRAY50_RGBA8, BlendMode::Opaque);
-        sprite.rotation = i as i16;
+        sprite.rotation = ((i as f32 / FRAMECOUNT as f32) * 256.0) as i16;
         sprite.scale = (0x200 as f32
             + 0x100 as f32 * ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin())
             as u16;

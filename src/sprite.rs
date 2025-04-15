@@ -1,5 +1,5 @@
 use alloc::{sync::Arc, vec::Vec};
-use glam::{U16Vec2, Vec2};
+use glam::{IVec2, U16Vec2, Vec2};
 
 use crate::{
     BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Renderer, bilinear_4_colors,
@@ -77,6 +77,8 @@ impl Sprite {
 
         let delta_col = Vec2::new(angle.sin(), angle.cos()) / scale;
         let delta_row = Vec2::new(delta_col.y, -delta_col.x);
+        let delta_col_fixed = (delta_col * 65536.0).as_ivec2();
+        let delta_row_fixed = (delta_row * 65536.0).as_ivec2();
 
         let start = Vec2::new(
             center.x
@@ -85,22 +87,31 @@ impl Sprite {
                 - (self.position.x as f32 * delta_row.y + self.position.y as f32 * delta_row.x),
         );
 
+        let size_x_fixed = ((self.size.x as i32) << 16) as u32;
+        let size_y_fixed = ((self.size.y as i32) << 16) as u32;
+
+        /*
+        we store uv as a fixed point vector instead of floating point
+        the benefit of this is that instead of checking if 0 <= x and x < size,
+        we can take advantage of two's complement negative being in the upper half of
+        unsigned values. so we reduce four checks for every pixel to two casts + two checks,
+        which runs faster than the c library this is benchmarked against
+        (the casts are practically free since it's from signed -> unsigned int of same width)
+        */
         {
-            let mut row = start + delta_col * min_y as f32 + delta_row * min_x as f32;
+            let mut row: IVec2 = ((start + delta_col * min_y as f32 + delta_row * min_x as f32)
+                * 65536.0)
+                .as_ivec2();
 
             for y in min_y..max_y {
                 let mut uv = row;
 
                 let mut x = min_x;
                 while x < max_x {
-                    if uv.x >= 0.0
-                        && uv.y >= 0.0
-                        && uv.x < self.size.x as f32
-                        && uv.y < self.size.y as f32
-                    {
+                    if (uv.x as u32) < size_x_fixed && (uv.y as u32) < size_y_fixed {
                         break;
                     }
-                    uv += delta_row;
+                    uv += delta_row_fixed;
                     x += 1;
                 }
                 loop {
@@ -108,17 +119,14 @@ impl Sprite {
                         break;
                     }
 
-                    if uv.x >= 0.0
-                        && uv.y >= 0.0
-                        && uv.x < self.size.x as f32
-                        && uv.y < self.size.y as f32
-                    {
-                        let c = self.pixels[uv.y as usize * self.size.x as usize + uv.x as usize]
+                    if (uv.x as u32) < size_x_fixed && (uv.y as u32) < size_y_fixed {
+                        let c = self.pixels
+                            [(uv.y >> 16) as usize * self.size.x as usize + (uv.x >> 16) as usize]
                             * if single_color {
                                 modulate_colors[0]
                             } else {
-                                let x = uv.x / self.size.x as f32;
-                                let y = uv.y / self.size.y as f32;
+                                let x = (uv.x / self.size.x as i32) as f32 / 65536.0;
+                                let y = (uv.y / self.size.y as i32) as f32 / 65536.0;
                                 bilinear_4_colors(
                                     x,
                                     y,
@@ -134,12 +142,12 @@ impl Sprite {
                         // renderer.set(x, y, FBColor::MAGENTA_RGBA8, BlendMode::Opaque);
                     }
 
-                    uv += delta_row;
+                    uv += delta_row_fixed;
 
                     x += 1;
                 }
 
-                row += delta_col;
+                row += delta_col_fixed;
             }
         }
     }

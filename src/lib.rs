@@ -24,6 +24,8 @@ pub use self::point::ColorVec2;
 pub use self::rect::ColorRect;
 pub use self::renderer::Renderer;
 pub use self::sprite::Sprite;
+pub use self::sprite::SpriteFrame;
+pub use self::sprite::SpriteFrameMode;
 
 pub trait Drawable {
     fn draw(&self, renderer: &mut Renderer);

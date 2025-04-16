@@ -8,6 +8,7 @@ use sappix::Drawable;
 use sappix::FBColor;
 use sappix::Renderer;
 use sappix::Sprite;
+use sappix::SpriteFrameMode;
 
 const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/space.gif");
 
@@ -30,8 +31,6 @@ fn main() {
 
     let mut sprite = Sprite::new(
         Arc::new(sprite_buf),
-        test_img.width() as u16,
-        test_img.height() as u16,
         256,
         256,
         0,
@@ -44,7 +43,7 @@ fn main() {
             FBColor::GRAY50_RGBA8,
             FBColor::YELLOW_RGBA8,
         ]),
-        None,
+        SpriteFrameMode::StillImage(test_img.width() as u8, test_img.height() as u8),
     );
 
     let mut renderer = Renderer::new(512, 512);

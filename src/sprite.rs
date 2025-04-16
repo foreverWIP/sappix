@@ -1,43 +1,72 @@
 use alloc::{sync::Arc, vec::Vec};
-use glam::{IVec2, U16Vec2, Vec2};
+use glam::{IVec2, U8Vec2, U16Vec2, Vec2};
 
 use crate::{
     BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Renderer, bilinear_4_colors,
     rect::Rect,
 };
 
+#[derive(Clone, Copy)]
+pub struct SpriteFrame {
+    offset: usize,
+    size: U8Vec2,
+}
+impl SpriteFrame {
+    pub fn new(offset: usize, width: u8, height: u8) -> Self {
+        Self {
+            offset,
+            size: U8Vec2::new(width, height),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub enum SpriteFrameMode {
+    StillImage(u8, u8),
+    MultipleFrames(Vec<SpriteFrame>),
+}
+
 pub struct Sprite {
     pixels: Arc<Vec<FBColor>>,
-    size: U16Vec2,
     pub position: FBVec2,
     pub rotation: FBAngle,
     pub scale: u16,
     pub blend_mode: BlendMode,
     pub modulate: ColorMode<4>,
-    pub clip_rect: Option<Rect>,
+    frame_mode: SpriteFrameMode,
+    cur_frame: usize,
 }
 impl Sprite {
     pub fn new(
         pixels: Arc<Vec<FBColor>>,
-        width: u16,
-        height: u16,
         x: FBCoord,
         y: FBCoord,
         rotation: FBAngle,
         scale: u16,
         blend_mode: BlendMode,
         modulate: ColorMode<4>,
-        clip_rect: Option<Rect>,
+        frame_mode: SpriteFrameMode,
     ) -> Self {
         Self {
             pixels,
-            size: U16Vec2::new(width, height),
             position: FBVec2::new(x, y),
             rotation,
             scale,
             blend_mode,
             modulate,
-            clip_rect,
+            frame_mode,
+            cur_frame: 0,
+        }
+    }
+
+    pub fn set_frame(&mut self, frame: usize) {
+        self.cur_frame = frame;
+    }
+
+    fn size(&self) -> U8Vec2 {
+        match &self.frame_mode {
+            SpriteFrameMode::StillImage(w, h) => U8Vec2::new(*w, *h),
+            SpriteFrameMode::MultipleFrames(sprite_frames) => sprite_frames[self.cur_frame].size,
         }
     }
 
@@ -61,12 +90,17 @@ impl Sprite {
             self.scale as f32 / 256.0
         };
 
-        let center = self.size.as_vec2() / 2.0;
+        let size = self.size();
+        let pixels_offset = match &self.frame_mode {
+            SpriteFrameMode::StillImage(_, _) => 0,
+            SpriteFrameMode::MultipleFrames(sprite_frames) => sprite_frames[self.cur_frame].offset,
+        };
+
+        let center = size.as_vec2() / 2.0;
 
         // crude approximation of drawing bounds
         // faster than scanning the entire framebuffer at least
-        let diagonal_radius =
-            ((self.size.x as f32).powi(2) + (self.size.y as f32).powi(2)).sqrt() / 2.0;
+        let diagonal_radius = ((size.x as f32).powi(2) + (size.y as f32).powi(2)).sqrt() / 2.0;
 
         let min_x = ((self.position.x as f32 - (diagonal_radius * scale)) as i16).max(0);
         let max_x =
@@ -87,8 +121,8 @@ impl Sprite {
                 - (self.position.x as f32 * delta_row.y + self.position.y as f32 * delta_row.x),
         );
 
-        let size_x_fixed = ((self.size.x as i32) << 16) as u32;
-        let size_y_fixed = ((self.size.y as i32) << 16) as u32;
+        let size_x_fixed = ((size.x as i32) << 16) as u32;
+        let size_y_fixed = ((size.y as i32) << 16) as u32;
 
         /*
         we store uv as a fixed point vector instead of floating point
@@ -120,13 +154,13 @@ impl Sprite {
                     }
 
                     if (uv.x as u32) < size_x_fixed && (uv.y as u32) < size_y_fixed {
-                        let c = self.pixels
-                            [(uv.y >> 16) as usize * self.size.x as usize + (uv.x >> 16) as usize]
+                        let c = self.pixels[pixels_offset
+                            + ((uv.y >> 16) as usize * size.x as usize + (uv.x >> 16) as usize)]
                             * if single_color {
                                 modulate_colors[0]
                             } else {
-                                let x = (uv.x / self.size.x as i32) as f32 / 65536.0;
-                                let y = (uv.y / self.size.y as i32) as f32 / 65536.0;
+                                let x = (uv.x / size.x as i32) as f32 / 65536.0;
+                                let y = (uv.y / size.y as i32) as f32 / 65536.0;
                                 bilinear_4_colors(
                                     x,
                                     y,
@@ -190,7 +224,7 @@ mod tests {
 
     use crate::{BlendMode, Renderer, ffi::*};
 
-    use super::Sprite;
+    use super::{Sprite, SpriteFrameMode};
 
     const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/test.gif");
 
@@ -245,15 +279,13 @@ mod tests {
 
         let mut sprite = Sprite::new(
             Arc::new(sprite_buf),
-            test_img.width() as u16,
-            test_img.height() as u16,
             64,
             64,
             0,
             0x100,
             BlendMode::Opaque,
             ColorMode::Solid(FBColor::WHITE_RGBA8),
-            None,
+            SpriteFrameMode::StillImage(test_img.width() as u8, test_img.height() as u8),
         );
 
         let mut renderer = Renderer::new(128, 128);

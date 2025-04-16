@@ -28,4 +28,6 @@ unsafe extern "C" {
     pub fn bm_width(b: Bitmap) -> c_int;
     pub fn bm_height(b: Bitmap) -> c_int;
     pub fn bm_load_mem(buffer: *const u8, len: c_long) -> Bitmap;
+    pub fn bm_circle(b: Bitmap, x0: c_int, y0: c_int, r: c_int) -> ();
+    pub fn bm_fillcircle(b: Bitmap, x0: c_int, y0: c_int, r: c_int) -> ();
 }

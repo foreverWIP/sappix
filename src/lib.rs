@@ -7,6 +7,7 @@ extern crate alloc;
 #[cfg(debug_assertions)]
 extern crate std;
 
+mod circle;
 mod color;
 mod ffi;
 mod line;
@@ -17,6 +18,7 @@ mod sprite;
 
 use glam::I16Vec2;
 
+pub use self::circle::Circle;
 pub use self::color::ColorMode;
 pub use self::color::FBColor;
 pub use self::line::Line;

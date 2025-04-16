@@ -13,27 +13,31 @@ pub struct FBColor {
     internal: Vec4,
 }
 impl FBColor {
-    pub const BLACK_RGBA8: Self = Self {
+    pub const BLACK: Self = Self {
         internal: Vec4::new(0.0, 0.0, 0.0, 1.0),
     };
 
-    pub const EMPTY_RGBA8: Self = Self {
+    pub const CYAN: Self = Self {
+        internal: Vec4::new(0.0, 1.0, 1.0, 1.0),
+    };
+
+    pub const EMPTY: Self = Self {
         internal: Vec4::ZERO,
     };
 
-    pub const GRAY50_RGBA8: Self = Self {
+    pub const GRAY50: Self = Self {
         internal: Vec4::new(0.5, 0.5, 0.5, 1.0),
     };
 
-    pub const MAGENTA_RGBA8: Self = Self {
+    pub const MAGENTA: Self = Self {
         internal: Vec4::new(1.0, 0.0, 1.0, 1.0),
     };
 
-    pub const WHITE_RGBA8: Self = Self {
+    pub const WHITE: Self = Self {
         internal: Vec4::ONE,
     };
 
-    pub const YELLOW_RGBA8: Self = Self {
+    pub const YELLOW: Self = Self {
         internal: Vec4::new(1.0, 1.0, 0.0, 1.0),
     };
 
@@ -91,6 +95,12 @@ impl FBColor {
 
     pub fn set_a(&mut self, value: f32) {
         self.internal.z = value;
+    }
+
+    pub fn with_a(&self, a: f32) -> Self {
+        Self {
+            internal: self.internal.with_w(a),
+        }
     }
 
     pub fn lerp(&self, rhs: Self, by: f32) -> Self {

@@ -1,9 +1,8 @@
 use alloc::{sync::Arc, vec::Vec};
-use glam::{IVec2, U8Vec2, U16Vec2, Vec2};
+use glam::{IVec2, U8Vec2, Vec2};
 
 use crate::{
     BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Renderer, bilinear_4_colors,
-    rect::Rect,
 };
 
 #[derive(Clone, Copy)]
@@ -284,7 +283,7 @@ mod tests {
             0,
             0x100,
             BlendMode::Opaque,
-            ColorMode::Solid(FBColor::WHITE_RGBA8),
+            ColorMode::Solid(FBColor::WHITE),
             SpriteFrameMode::StillImage(test_img.width() as u8, test_img.height() as u8),
         );
 

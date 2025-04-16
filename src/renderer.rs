@@ -1,3 +1,5 @@
+use core::ops::Range;
+
 use alloc::vec;
 use alloc::vec::Vec;
 
@@ -23,13 +25,15 @@ pub struct Renderer {
     fb: Vec<FBColor>,
     width: u16,
     height: u16,
+    work_edges: Vec<Range<i16>>,
 }
 impl Renderer {
     pub fn new(width: u16, height: u16) -> Self {
         Self {
-            fb: vec![FBColor::EMPTY_RGBA8; width as usize * height as usize],
+            fb: vec![FBColor::EMPTY; width as usize * height as usize],
             width,
             height,
+            work_edges: vec![i16::MAX..i16::MIN; height as usize],
         }
     }
 
@@ -47,6 +51,14 @@ impl Renderer {
 
     pub fn fb_rgba8(&self) -> Vec<u8> {
         self.fb.iter().flat_map(|fbc| fbc.to_rgba8()).collect()
+    }
+
+    pub(crate) fn edge_buffer(&self) -> &[Range<i16>] {
+        &self.work_edges
+    }
+
+    pub(crate) fn edge_buffer_mut(&mut self) -> &mut [Range<i16>] {
+        &mut self.work_edges
     }
 
     pub fn fill(&mut self, color: FBColor, blend_mode: BlendMode) {

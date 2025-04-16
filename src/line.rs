@@ -209,7 +209,7 @@ mod tests {
     use crate::{BlendMode, Line, Renderer, ffi::*};
 
     #[bench]
-    fn bmp_draw_line(bencher: &mut Bencher) {
+    fn bmp_line(bencher: &mut Bencher) {
         let b = test::black_box(unsafe { bm_create(128, 128) });
         let mut rand = std::random::DefaultRandomSource;
         bencher.iter(|| unsafe {
@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[bench]
-    fn our_draw_line(bencher: &mut Bencher) {
+    fn our_line(bencher: &mut Bencher) {
         let mut renderer = test::black_box(Renderer::new(128, 128));
         let mut rand = std::random::DefaultRandomSource;
         let mut line = Line::new(
@@ -235,7 +235,7 @@ mod tests {
             0,
             0,
             0,
-            crate::ColorMode::Solid(FBColor::WHITE_RGBA8),
+            crate::ColorMode::Solid(FBColor::WHITE),
             BlendMode::Opaque,
         );
         bencher.iter(|| {

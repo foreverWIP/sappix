@@ -1,23 +1,16 @@
-use crate::{BlendMode, ColorMode, Drawable, FBCoord, FBVec2, Renderer};
+use crate::{BlendMode, ColorMode, Drawable, I16Vec2, Renderer};
 
 pub struct Line {
-    pub a: FBVec2,
-    pub b: FBVec2,
+    pub a: I16Vec2,
+    pub b: I16Vec2,
     pub color: ColorMode<2>,
     pub blend_mode: BlendMode,
 }
 impl Line {
-    pub const fn new(
-        a_x: FBCoord,
-        a_y: FBCoord,
-        b_x: FBCoord,
-        b_y: FBCoord,
-        color: ColorMode<2>,
-        blend_mode: BlendMode,
-    ) -> Self {
+    pub const fn new(a: I16Vec2, b: I16Vec2, color: ColorMode<2>, blend_mode: BlendMode) -> Self {
         Self {
-            a: FBVec2::new(a_x, a_y),
-            b: FBVec2::new(b_x, b_y),
+            a,
+            b,
             color,
             blend_mode,
         }
@@ -27,10 +20,10 @@ impl Drawable for Line {
     fn draw(&self, renderer: &mut crate::Renderer) {
         fn plot_line_common<const HIGH: bool>(
             renderer: &mut Renderer,
-            x1: FBCoord,
-            y1: FBCoord,
-            x2: FBCoord,
-            y2: FBCoord,
+            x1: i16,
+            y1: i16,
+            x2: i16,
+            y2: i16,
             color: ColorMode<2>,
             blend_mode: BlendMode,
         ) {
@@ -204,6 +197,7 @@ mod tests {
 
     use ::test::Bencher;
     use core::ffi::*;
+    use glam::I16Vec2;
     use std::random::Random;
 
     use crate::{BlendMode, Line, Renderer, ffi::*};
@@ -231,10 +225,8 @@ mod tests {
         let mut renderer = test::black_box(Renderer::new(128, 128));
         let mut rand = std::random::DefaultRandomSource;
         let mut line = Line::new(
-            0,
-            0,
-            0,
-            0,
+            I16Vec2::ZERO,
+            I16Vec2::ZERO,
             crate::ColorMode::Solid(FBColor::WHITE),
             BlendMode::Opaque,
         );

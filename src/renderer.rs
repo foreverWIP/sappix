@@ -3,7 +3,7 @@ use core::ops::Range;
 use alloc::vec;
 use alloc::vec::Vec;
 
-use crate::{BlendMode, Drawable, FBColor, FBCoord, blend_alpha, blend_none};
+use crate::{BlendMode, Drawable, FBColor, blend_alpha, blend_none};
 
 macro_rules! fb_idx {
     ($renderer:expr, $x:expr, $y:expr) => {
@@ -37,12 +37,12 @@ impl Renderer {
         }
     }
 
-    pub fn width(&self) -> FBCoord {
-        self.width as FBCoord
+    pub fn width(&self) -> i16 {
+        self.width as i16
     }
 
-    pub fn height(&self) -> FBCoord {
-        self.height as FBCoord
+    pub fn height(&self) -> i16 {
+        self.height as i16
     }
 
     pub fn fb(&self) -> &Vec<FBColor> {
@@ -68,13 +68,13 @@ impl Renderer {
         }
         for y in 0..self.height {
             for x in 0..self.width {
-                self.set(x as FBCoord, y as FBCoord, color, blend_mode);
+                self.set(x as i16, y as i16, color, blend_mode);
             }
         }
     }
 
-    pub fn set(&mut self, x: FBCoord, y: FBCoord, color: FBColor, blend_mode: BlendMode) {
-        if x < 0 || x >= self.width as FBCoord || y < 0 || y >= self.height as FBCoord {
+    pub fn set(&mut self, x: i16, y: i16, color: FBColor, blend_mode: BlendMode) {
+        if x < 0 || x >= self.width as i16 || y < 0 || y >= self.height as i16 {
             return;
         }
         let blend_func = get_blend_func(blend_mode);
@@ -82,7 +82,7 @@ impl Renderer {
         blend_func(color, &mut self.fb[idx]);
     }
 
-    pub fn set_unchecked(&mut self, x: FBCoord, y: FBCoord, color: FBColor, blend_mode: BlendMode) {
+    pub fn set_unchecked(&mut self, x: i16, y: i16, color: FBColor, blend_mode: BlendMode) {
         let blend_func = get_blend_func(blend_mode);
         let idx = fb_idx!(self, x, y);
         blend_func(color, &mut self.fb[idx]);

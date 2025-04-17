@@ -33,6 +33,10 @@ impl FBColor {
         internal: Vec4::new(1.0, 0.0, 1.0, 1.0),
     };
 
+    pub const RED: Self = Self {
+        internal: Vec4::new(1.0, 0.0, 0.0, 1.0),
+    };
+
     pub const WHITE: Self = Self {
         internal: Vec4::ONE,
     };

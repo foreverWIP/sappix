@@ -1,7 +1,7 @@
-use crate::{BlendMode, Drawable, FBColor, FBVec2};
+use crate::{BlendMode, Drawable, FBColor, I16Vec2};
 
 pub struct Circle {
-    pub position: FBVec2,
+    pub position: I16Vec2,
     pub radius: u16,
     pub fill: bool,
     pub color: FBColor,
@@ -9,15 +9,14 @@ pub struct Circle {
 }
 impl Circle {
     pub fn new(
-        x: i16,
-        y: i16,
+        position: I16Vec2,
         radius: u16,
         fill: bool,
         color: FBColor,
         blend_mode: BlendMode,
     ) -> Self {
         Self {
-            position: FBVec2::new(x, y),
+            position,
             radius,
             fill,
             color,
@@ -123,7 +122,7 @@ mod tests {
     use core::ffi::*;
     use std::random::Random;
 
-    use crate::{BlendMode, Renderer, ffi::*};
+    use crate::{BlendMode, I16Vec2, Renderer, ffi::*};
 
     use super::Circle;
 
@@ -148,7 +147,7 @@ mod tests {
     fn our_circle(bencher: &mut Bencher) {
         let mut renderer = test::black_box(Renderer::new(128, 128));
         let mut rand = std::random::DefaultRandomSource;
-        let mut circle = Circle::new(0, 0, 0, false, FBColor::MAGENTA, BlendMode::Opaque);
+        let mut circle = Circle::new(I16Vec2::ZERO, 0, false, FBColor::MAGENTA, BlendMode::Opaque);
         bencher.iter(|| {
             circle.position.x = c_short::random(&mut rand);
             circle.position.y = c_short::random(&mut rand);
@@ -178,7 +177,7 @@ mod tests {
     fn our_fillcircle(bencher: &mut Bencher) {
         let mut renderer = test::black_box(Renderer::new(128, 128));
         let mut rand = std::random::DefaultRandomSource;
-        let mut circle = Circle::new(0, 0, 0, true, FBColor::MAGENTA, BlendMode::Opaque);
+        let mut circle = Circle::new(I16Vec2::ZERO, 0, true, FBColor::MAGENTA, BlendMode::Opaque);
         bencher.iter(|| {
             circle.position.x = c_short::random(&mut rand);
             circle.position.y = c_short::random(&mut rand);

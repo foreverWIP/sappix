@@ -3,6 +3,6 @@
 **/*.rs.bk
 *.pdb
 
-./test.bin
-./test.png
-./test.gif
+test.bin
+test.png
+test.gif

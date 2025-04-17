@@ -16,7 +16,8 @@ mod rect;
 mod renderer;
 mod sprite;
 
-use glam::I16Vec2;
+pub use glam::I16Vec2;
+pub use glam::U16Vec2;
 
 pub use self::circle::Circle;
 pub use self::color::ColorMode;
@@ -24,6 +25,7 @@ pub use self::color::FBColor;
 pub use self::line::Line;
 pub use self::point::ColorVec2;
 pub use self::rect::ColorRect;
+pub use self::rect::Rect;
 pub use self::renderer::Renderer;
 pub use self::sprite::Sprite;
 pub use self::sprite::SpriteFrame;
@@ -38,11 +40,6 @@ pub enum BlendMode {
     Opaque,
     Alpha,
 }
-
-pub type FBCoord = i16;
-pub type FBAngle = i16;
-pub type FBVec2 = I16Vec2;
-pub type FBRange = u8;
 
 pub(crate) fn bilinear_4_colors(
     x: f32,

@@ -5,8 +5,11 @@ use gif::ExtensionData;
 use sappix::BlendMode;
 use sappix::Circle;
 use sappix::ColorMode;
+use sappix::ColorRect;
 use sappix::Drawable;
 use sappix::FBColor;
+use sappix::I16Vec2;
+use sappix::Rect;
 use sappix::Renderer;
 use sappix::Sprite;
 use sappix::SpriteFrameMode;
@@ -32,8 +35,7 @@ fn main() {
 
     let mut sprite = Sprite::new(
         Arc::new(sprite_buf),
-        256,
-        256,
+        I16Vec2::splat(256),
         0,
         0x100,
         BlendMode::Opaque,
@@ -47,25 +49,31 @@ fn main() {
         SpriteFrameMode::StillImage(test_img.width() as u8, test_img.height() as u8),
     );
 
+    let mut rect = ColorRect::new(
+        Rect {
+            position: I16Vec2::splat(256),
+            size: I16Vec2::ZERO,
+        },
+        ColorMode::Solid(FBColor::RED),
+        BlendMode::Opaque,
+    );
+
     let mut circle_1 = Circle::new(
-        256,
-        256,
+        I16Vec2::splat(256),
         0,
         true,
         FBColor::MAGENTA.with_a(0.5),
         BlendMode::Alpha,
     );
     let mut circle_2 = Circle::new(
-        256,
-        256,
+        I16Vec2::splat(256),
         0,
         true,
         FBColor::BLACK.with_a(0.5),
         BlendMode::Alpha,
     );
     let mut circle_3 = Circle::new(
-        256,
-        256,
+        I16Vec2::splat(256),
         0,
         true,
         FBColor::CYAN.with_a(0.5),
@@ -100,6 +108,12 @@ fn main() {
             + 0x10 as f32 * ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin())
             as u16;
         // sprite.draw(&mut renderer);
+
+        rect.rect.size.x =
+            (((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin() * 256.0) as i16;
+        rect.rect.size.y =
+            (((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().cos() * 256.0) as i16;
+        rect.draw(&mut renderer);
 
         circle_1.radius = (0x80 as f32
             + 0x80 as f32 * ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin())

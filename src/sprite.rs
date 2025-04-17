@@ -1,9 +1,7 @@
 use alloc::{sync::Arc, vec::Vec};
 use glam::{IVec2, U8Vec2, Vec2};
 
-use crate::{
-    BlendMode, ColorMode, Drawable, FBAngle, FBColor, FBCoord, FBVec2, Renderer, bilinear_4_colors,
-};
+use crate::{BlendMode, ColorMode, Drawable, FBColor, I16Vec2, Renderer, bilinear_4_colors};
 
 #[derive(Clone, Copy)]
 pub struct SpriteFrame {
@@ -27,8 +25,8 @@ pub enum SpriteFrameMode {
 
 pub struct Sprite {
     pixels: Arc<Vec<FBColor>>,
-    pub position: FBVec2,
-    pub rotation: FBAngle,
+    pub position: I16Vec2,
+    pub rotation: i16,
     pub scale: u16,
     pub blend_mode: BlendMode,
     pub modulate: ColorMode<4>,
@@ -38,9 +36,8 @@ pub struct Sprite {
 impl Sprite {
     pub fn new(
         pixels: Arc<Vec<FBColor>>,
-        x: FBCoord,
-        y: FBCoord,
-        rotation: FBAngle,
+        position: I16Vec2,
+        rotation: i16,
         scale: u16,
         blend_mode: BlendMode,
         modulate: ColorMode<4>,
@@ -48,7 +45,7 @@ impl Sprite {
     ) -> Self {
         Self {
             pixels,
-            position: FBVec2::new(x, y),
+            position,
             rotation,
             scale,
             blend_mode,
@@ -221,7 +218,7 @@ mod tests {
     use core::ffi::*;
     use std::random::Random;
 
-    use crate::{BlendMode, Renderer, ffi::*};
+    use crate::{BlendMode, I16Vec2, Renderer, ffi::*};
 
     use super::{Sprite, SpriteFrameMode};
 
@@ -278,8 +275,7 @@ mod tests {
 
         let mut sprite = Sprite::new(
             Arc::new(sprite_buf),
-            64,
-            64,
+            I16Vec2::splat(64),
             0,
             0x100,
             BlendMode::Opaque,

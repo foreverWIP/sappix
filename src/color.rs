@@ -56,10 +56,10 @@ impl FBColor {
     pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
         let divisor = 1.0 / 255.0;
         Self::new(
-            r as f32 / divisor,
-            g as f32 / divisor,
-            b as f32 / divisor,
-            a as f32 / divisor,
+            r as f32 * divisor,
+            g as f32 * divisor,
+            b as f32 * divisor,
+            a as f32 * divisor,
         )
     }
 

@@ -112,6 +112,14 @@ impl FBColor {
             internal: self.internal.lerp(rhs.internal, by),
         }
     }
+
+    pub fn lerp3(colors: &[Self; 3], weights: &[f32; 3]) -> Self {
+        Self {
+            internal: colors[0].internal * weights[0]
+                + colors[1].internal * weights[1]
+                + colors[2].internal * weights[2],
+        }
+    }
 }
 impl Mul for FBColor {
     type Output = Self;

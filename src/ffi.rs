@@ -6,6 +6,13 @@ use core::ffi::{c_double, c_int, c_long, c_uchar, c_uint};
 pub type Bitmap = *mut ();
 pub type BMColor = c_uint;
 
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct BmPoint {
+    pub x: c_int,
+    pub y: c_int,
+}
+
 unsafe extern "C" {
     pub fn bm_create(w: c_int, h: c_int) -> Bitmap;
     pub fn bm_set_color(bm: Bitmap, col: BMColor) -> ();
@@ -32,4 +39,6 @@ unsafe extern "C" {
     pub fn bm_fillcircle(b: Bitmap, x0: c_int, y0: c_int, r: c_int) -> ();
     pub fn bm_rect(b: Bitmap, x0: c_int, y0: c_int, x1: c_int, y1: c_int) -> ();
     pub fn bm_fillrect(b: Bitmap, x0: c_int, y0: c_int, x1: c_int, y1: c_int) -> ();
+    pub fn bm_poly(b: Bitmap, points: *const BmPoint, n: c_uint) -> ();
+    pub fn bm_fillpoly(b: Bitmap, points: *const BmPoint, n: c_uint) -> ();
 }

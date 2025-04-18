@@ -15,6 +15,7 @@ mod point;
 mod rect;
 mod renderer;
 mod sprite;
+mod triangle;
 
 pub use glam::I16Vec2;
 pub use glam::U16Vec2;
@@ -30,6 +31,7 @@ pub use self::renderer::Renderer;
 pub use self::sprite::Sprite;
 pub use self::sprite::SpriteFrame;
 pub use self::sprite::SpriteFrameMode;
+pub use self::triangle::Triangle;
 
 pub trait Drawable {
     fn draw(&self, renderer: &mut Renderer);

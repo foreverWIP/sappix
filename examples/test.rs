@@ -13,6 +13,7 @@ use sappix::Rect;
 use sappix::Renderer;
 use sappix::Sprite;
 use sappix::SpriteFrameMode;
+use sappix::Triangle;
 
 const TEST_SPRITE_FILE: &[u8] = include_bytes!("../testimgs/space.gif");
 
@@ -80,6 +81,14 @@ fn main() {
         BlendMode::Alpha,
     );
 
+    let mut triangle = Triangle::new(
+        I16Vec2::new(128, 128),
+        I16Vec2::new(256 + 128, 128 + 64),
+        I16Vec2::new(128 + 64, 256),
+        ColorMode::PerPoint([FBColor::MAGENTA, FBColor::YELLOW, FBColor::CYAN]),
+        BlendMode::Opaque,
+    );
+
     let mut renderer = Renderer::new(512, 512);
 
     let image = File::create("test.gif").unwrap();
@@ -109,30 +118,56 @@ fn main() {
             as u16;
         // sprite.draw(&mut renderer);
 
+        triangle.a.x =
+            ((128 as f32) + ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().cos()) as i16;
+        triangle.a.y =
+            ((128 as f32) + ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin()) as i16;
+        triangle.b.x = (((256 + 128) as f32)
+            + (((i as f32 / FRAMECOUNT as f32) * 360.0 + 90.0)
+                .to_radians()
+                .cos())
+                * 16.0) as i16;
+        triangle.b.y = (((128 + 64) as f32)
+            + (((i as f32 / FRAMECOUNT as f32) * 360.0 + 90.0)
+                .to_radians()
+                .sin())
+                * 12.0) as i16;
+        triangle.c.x = (((128 + 64) as f32)
+            + (((i as f32 / FRAMECOUNT as f32) * 360.0 + 195.0)
+                .to_radians()
+                .cos())
+                * 13.0) as i16;
+        triangle.c.y = ((256 as f32)
+            + (((i as f32 / FRAMECOUNT as f32) * 360.0 + 195.0)
+                .to_radians()
+                .sin())
+                * 24.0) as i16;
+        triangle.draw(&mut renderer);
+
         rect.rect.size.x =
             (((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin() * 256.0) as i16;
         rect.rect.size.y =
             (((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().cos() * 256.0) as i16;
-        rect.draw(&mut renderer);
+        // rect.draw(&mut renderer);
 
         circle_1.radius = (0x80 as f32
             + 0x80 as f32 * ((i as f32 / FRAMECOUNT as f32) * 360.0).to_radians().sin())
             as u16;
-        circle_1.draw(&mut renderer);
+        // circle_1.draw(&mut renderer);
 
         circle_2.radius = (0x80 as f32
             + 0x80 as f32
                 * (((i as f32 / FRAMECOUNT as f32) * 360.0) + 90.0)
                     .to_radians()
                     .sin()) as u16;
-        circle_2.draw(&mut renderer);
+        // circle_2.draw(&mut renderer);
 
         circle_3.radius = (0x80 as f32
             + 0x80 as f32
                 * (((i as f32 / FRAMECOUNT as f32) * 360.0) + 180.0)
                     .to_radians()
                     .sin()) as u16;
-        circle_3.draw(&mut renderer);
+        // circle_3.draw(&mut renderer);
 
         let mut fb: Vec<_> = renderer.fb_rgba8();
         encoder

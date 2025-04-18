@@ -51,21 +51,24 @@ impl FBColor {
         }
     }
 
+    // color conversion math based on https://lomont.org/posts/2023/accuratecolorconversions/
+
     pub fn from_rgba8(r: u8, g: u8, b: u8, a: u8) -> Self {
+        let divisor = 1.0 / 255.0;
         Self::new(
-            r as f32 / 255.0,
-            g as f32 / 255.0,
-            b as f32 / 255.0,
-            a as f32 / 255.0,
+            r as f32 / divisor,
+            g as f32 / divisor,
+            b as f32 / divisor,
+            a as f32 / divisor,
         )
     }
 
     pub fn to_rgba8(&self) -> [u8; 4] {
         [
-            (self.r() * 255.0) as u8,
-            (self.g() * 255.0) as u8,
-            (self.b() * 255.0) as u8,
-            (self.a() * 255.0) as u8,
+            (self.r() * 256.0).floor().clamp(0.0, 255.0) as u8,
+            (self.g() * 256.0).floor().clamp(0.0, 255.0) as u8,
+            (self.b() * 256.0).floor().clamp(0.0, 255.0) as u8,
+            (self.a() * 256.0).floor().clamp(0.0, 255.0) as u8,
         ]
     }
 
